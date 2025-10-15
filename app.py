@@ -50,9 +50,7 @@ def main():
         - 💾 Data backup & export
         - ⚙️ System settings
         
-        **Demo Credentials:**
-        - Username: `admin`
-        - Password: `admin123`
+        
         """)
         return
     
@@ -80,4 +78,5 @@ def main():
 
 
 if __name__ == "__main__":
+
     main()
