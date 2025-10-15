@@ -24,6 +24,7 @@ def show():
         st.markdown("#### ➕ เพิ่มผู้ใช้")
         with st.form("add_user_form"):
             new_user = st.text_input("Username")
+            new_full_name = st.text_input("Full Name")
             new_pass = st.text_input("Password", type="password")
             new_pass_conf = st.text_input("Confirm Password", type="password")
             new_role = st.selectbox("Role", ["Member", "Admin"])
@@ -34,7 +35,7 @@ def show():
                 elif new_pass != new_pass_conf:
                     st.error("❌ Password ไม่ตรงกัน")
                 else:
-                    ok, msg = add_user(new_user, new_pass, new_role)
+                    ok, msg = add_user(new_user, new_pass, new_role, new_full_name)
                     if ok:
                         st.success(msg)
                         time.sleep(1)
@@ -71,6 +72,7 @@ def show():
     for username in users:
         user_data.append({
             "Username": username,
+            "Full Name": users[username].get("full_name", ""),
             "Role": users[username]["role"]
         })
     

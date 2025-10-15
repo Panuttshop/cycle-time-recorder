@@ -25,11 +25,13 @@ def ensure_files():
         users_data = {
             DEFAULT_ADMIN[0]: {
                 "password_hash": hash_password(DEFAULT_ADMIN[1]),
-                "role": "Admin"
+                "role": "Admin",
+                "full_name": "Administrator"
             },
             "alice": {
                 "password_hash": hash_password("Alice123"),
-                "role": "Member"
+                "role": "Member",
+                "full_name": "Alice Smith"
             }
         }
         with open(USERS_FILE, 'w', encoding='utf-8') as f:

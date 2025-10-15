@@ -5,9 +5,11 @@ import hashlib
 import secrets
 import logging
 from typing import Tuple, Optional
-from config.settings import PASSWORD_MIN_LENGTH
 
 logger = logging.getLogger(__name__)
+
+# Password requirements (defined here to avoid circular import)
+PASSWORD_MIN_LENGTH = 8
 
 
 def hash_password(password: str, salt: Optional[str] = None) -> str:

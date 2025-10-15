@@ -8,7 +8,8 @@
     "role": "Member"
   },
   "29006406": {
-    "password_hash": "535521f3909da2f0789f12fe6b2b9427$c74ee002074456f9d43080841ccf43d3929d14864e34bf032e399a2199aba304",
-    "role": "Admin"
+    "password_hash": "4c27bbf1253fa82929908a249832919b$ceb9f994fc2236074a93af73fa8797e08cfa628ad9f929121c81a54e51253f92",
+    "role": "Admin",
+    "full_name": "Panupat Srikul"
   }
 }
