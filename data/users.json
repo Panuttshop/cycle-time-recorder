@@ -1,0 +1,14 @@
+{
+  "admin": {
+    "password_hash": "85283770f37a433bcf49f628eb2b69c5$abf447f24848096997916c95b59447051f6f0396462f3ac360f9a5e9e150110f",
+    "role": "Admin"
+  },
+  "alice": {
+    "password_hash": "075ad8afe1ddb817a376e2077d95bf0e$60175b6f5fa9ef2dc08a328acd7405f6efacf103ee7054bf52651b063575c70b",
+    "role": "Member"
+  },
+  "29006406": {
+    "password_hash": "535521f3909da2f0789f12fe6b2b9427$c74ee002074456f9d43080841ccf43d3929d14864e34bf032e399a2199aba304",
+    "role": "Admin"
+  }
+}

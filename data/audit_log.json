@@ -1,0 +1,224 @@
+[
+  {
+    "timestamp": "2025-10-14T14:10:19.958101",
+    "action": "LOGIN",
+    "username": "admin",
+    "details": ""
+  },
+  {
+    "timestamp": "2025-10-14T14:15:16.595259",
+    "action": "CREATE_RECORDS",
+    "username": "admin",
+    "details": "Added 5 records"
+  },
+  {
+    "timestamp": "2025-10-14T14:18:52.256384",
+    "action": "LOGIN",
+    "username": "admin",
+    "details": ""
+  },
+  {
+    "timestamp": "2025-10-14T14:23:10.381354",
+    "action": "LOGIN",
+    "username": "admin",
+    "details": ""
+  },
+  {
+    "timestamp": "2025-10-14T14:26:21.530339",
+    "action": "ADD_USER",
+    "username": "admin",
+    "details": "Added user: 29006406"
+  },
+  {
+    "timestamp": "2025-10-14T14:26:24.652034",
+    "action": "LOGOUT",
+    "username": "admin",
+    "details": ""
+  },
+  {
+    "timestamp": "2025-10-14T14:26:32.498389",
+    "action": "LOGIN",
+    "username": "29006406",
+    "details": ""
+  },
+  {
+    "timestamp": "2025-10-14T14:27:05.059978",
+    "action": "LOGOUT",
+    "username": "29006406",
+    "details": ""
+  },
+  {
+    "timestamp": "2025-10-14T14:27:10.826043",
+    "action": "LOGIN",
+    "username": "admin",
+    "details": ""
+  },
+  {
+    "timestamp": "2025-10-14T14:27:41.843648",
+    "action": "REMOVE_USER",
+    "username": "admin",
+    "details": "Removed user: 29006406"
+  },
+  {
+    "timestamp": "2025-10-14T14:27:56.145658",
+    "action": "ADD_USER",
+    "username": "admin",
+    "details": "Added user: 29006406"
+  },
+  {
+    "timestamp": "2025-10-14T14:28:03.021410",
+    "action": "LOGOUT",
+    "username": "admin",
+    "details": ""
+  },
+  {
+    "timestamp": "2025-10-14T14:28:10.758009",
+    "action": "LOGIN",
+    "username": "29006406",
+    "details": ""
+  },
+  {
+    "timestamp": "2025-10-14T14:35:09.031057",
+    "action": "LOGIN",
+    "username": "admin",
+    "details": ""
+  },
+  {
+    "timestamp": "2025-10-14T14:40:38.266282",
+    "action": "LOGIN",
+    "username": "29006406",
+    "details": ""
+  },
+  {
+    "timestamp": "2025-10-14T14:42:58.316365",
+    "action": "LOGIN",
+    "username": "29006406",
+    "details": ""
+  },
+  {
+    "timestamp": "2025-10-14T15:26:41.758073",
+    "action": "LOGIN",
+    "username": "29006406",
+    "details": ""
+  },
+  {
+    "timestamp": "2025-10-14T15:36:56.332246",
+    "action": "LOGIN",
+    "username": "29006406",
+    "details": ""
+  },
+  {
+    "timestamp": "2025-10-14T15:38:14.799173",
+    "action": "LOGIN",
+    "username": "29006406",
+    "details": ""
+  },
+  {
+    "timestamp": "2025-10-15T08:22:36.049460",
+    "action": "LOGIN",
+    "username": "admin",
+    "details": ""
+  },
+  {
+    "timestamp": "2025-10-15T08:32:56.071748",
+    "action": "LOGIN",
+    "username": "admin",
+    "details": ""
+  },
+  {
+    "timestamp": "2025-10-15T08:39:27.690792",
+    "action": "LOGIN",
+    "username": "admin",
+    "details": ""
+  },
+  {
+    "timestamp": "2025-10-15T08:44:18.483993",
+    "action": "LOGIN",
+    "username": "admin",
+    "details": ""
+  },
+  {
+    "timestamp": "2025-10-15T08:44:30.927305",
+    "action": "EDIT_RECORD",
+    "username": "admin",
+    "details": "Edited: DC-2317 - M-10"
+  },
+  {
+    "timestamp": "2025-10-15T08:44:33.815393",
+    "action": "EDIT_RECORD",
+    "username": "admin",
+    "details": "Edited: DC-2317 - M-20"
+  },
+  {
+    "timestamp": "2025-10-15T08:44:36.774139",
+    "action": "EDIT_RECORD",
+    "username": "admin",
+    "details": "Edited: DC-2317 - M-30"
+  },
+  {
+    "timestamp": "2025-10-15T08:44:40.382144",
+    "action": "EDIT_RECORD",
+    "username": "admin",
+    "details": "Edited: DC-2317 - M-40"
+  },
+  {
+    "timestamp": "2025-10-15T08:44:43.998771",
+    "action": "EDIT_RECORD",
+    "username": "admin",
+    "details": "Edited: DC-2317 - M-50"
+  },
+  {
+    "timestamp": "2025-10-15T08:47:33.389680",
+    "action": "LOGIN",
+    "username": "admin",
+    "details": ""
+  },
+  {
+    "timestamp": "2025-10-15T08:55:23.541337",
+    "action": "LOGIN",
+    "username": "admin",
+    "details": ""
+  },
+  {
+    "timestamp": "2025-10-15T08:58:51.046640",
+    "action": "LOGIN",
+    "username": "admin",
+    "details": ""
+  },
+  {
+    "timestamp": "2025-10-15T09:02:00.176142",
+    "action": "LOGIN",
+    "username": "admin",
+    "details": ""
+  },
+  {
+    "timestamp": "2025-10-15T09:11:07.769405",
+    "action": "LOGIN",
+    "username": "admin",
+    "details": ""
+  },
+  {
+    "timestamp": "2025-10-15T11:10:35.108507",
+    "action": "LOGIN",
+    "username": "admin",
+    "details": ""
+  },
+  {
+    "timestamp": "2025-10-15T11:24:40.711379",
+    "action": "LOGIN",
+    "username": "admin",
+    "details": ""
+  },
+  {
+    "timestamp": "2025-10-15T11:29:28.620107",
+    "action": "LOGIN",
+    "username": "admin",
+    "details": ""
+  },
+  {
+    "timestamp": "2025-10-15T13:05:26.290212",
+    "action": "LOGIN",
+    "username": "admin",
+    "details": ""
+  }
+]
