@@ -55,7 +55,12 @@ def show_login_ui() -> bool:
     st.sidebar.title("🔐 Login")
     
     if st.session_state.logged_in:
-        st.sidebar.success(f"✓ {st.session_state.username} ({st.session_state.role})")
+        users = load_users()
+        full_name = users.get(st.session_state.username, {}).get('full_name', '')
+        display_name = full_name if full_name else st.session_state.username
+        
+        st.sidebar.success(f"✓ {display_name}")
+        st.sidebar.caption(f"Role: {st.session_state.role}")
         if st.sidebar.button("🚪 Logout"):
             do_logout()
             st.experimental_rerun()
@@ -77,7 +82,7 @@ def show_login_ui() -> bool:
     return False
 
 
-def add_user(username: str, password: str, role: str = "Member") -> Tuple[bool, str]:
+def add_user(username: str, password: str, role: str = "Member", full_name: str = "") -> Tuple[bool, str]:
     """
     Add a new user
     
@@ -85,6 +90,7 @@ def add_user(username: str, password: str, role: str = "Member") -> Tuple[bool, 
         username: New username
         password: New password
         role: User role (Member/Admin)
+        full_name: Full name of user
         
     Returns:
         Tuple of (success, message)
@@ -103,11 +109,12 @@ def add_user(username: str, password: str, role: str = "Member") -> Tuple[bool, 
     
     users[username] = {
         "password_hash": hash_password(password),
-        "role": role.title()
+        "role": role.title(),
+        "full_name": full_name.strip()
     }
     
     if save_users(users):
-        add_audit_log("ADD_USER", st.session_state.username, f"Added user: {username}")
+        add_audit_log("ADD_USER", st.session_state.username, f"Added user: {username} ({full_name})")
         return True, "เพิ่มผู้ใช้เรียบร้อย"
     return False, "เกิดข้อผิดพลาด"
 
