@@ -63,7 +63,7 @@ def show_login_ui() -> bool:
         st.sidebar.caption(f"Role: {st.session_state.role}")
         if st.sidebar.button("🚪 Logout"):
             do_logout()
-            st.experimental_rerun()
+            st.rerun()
         return True
     
     with st.sidebar.form("login_form"):
@@ -73,7 +73,7 @@ def show_login_ui() -> bool:
         
         if submitted:
             if do_login(username.strip(), password):
-                st.experimental_rerun()
+                st.rerun()
             else:
                 st.error("❌ Username หรือ Password ไม่ถูกต้อง")
     
