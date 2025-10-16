@@ -1,7 +1,11 @@
 import streamlit as st
-from auth.authentication import change_password, SESSION_TIMEOUT_MINUTES
-from utils.security import validate_password_strength
 from datetime import datetime
+
+# Import from authentication module
+try:
+    from auth.authentication import change_password, SESSION_TIMEOUT_MINUTES, validate_password_strength
+except ImportError:
+    from authentication import change_password, SESSION_TIMEOUT_MINUTES, validate_password_strength
 
 def show():
     """Display settings page"""
