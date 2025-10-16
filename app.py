@@ -35,7 +35,7 @@ def show_placeholder_page(page_name):
     st.markdown("""
     ### How to add your page:
     
-    1. Create a file in `pages/` folder with your page code
+    1. Create a file in `views/` folder with your page code
     2. Add a `show()` function that contains your page logic
     3. The app will automatically load it
     
@@ -86,35 +86,35 @@ def main():
     try:
         if page == "📝 Data Entry":
             try:
-                from pages import main_entry
+                from views import main_entry
                 load_page(main_entry, "Data Entry")
             except (ImportError, ModuleNotFoundError):
                 show_placeholder_page("📝 Data Entry")
             
         elif page == "👁️ View & Edit Records":
             try:
-                from pages import view_edit
+                from views import view_edit
                 load_page(view_edit, "View & Edit Records")
             except (ImportError, ModuleNotFoundError):
                 show_placeholder_page("👁️ View & Edit Records")
             
         elif page == "📊 Analytics Dashboard":
             try:
-                from pages import analytics
+                from views import analytics
                 load_page(analytics, "Analytics Dashboard")
             except (ImportError, ModuleNotFoundError):
                 show_placeholder_page("📊 Analytics Dashboard")
             
         elif page == "📤 Export & Reports":
             try:
-                from pages import export
+                from views import export
                 load_page(export, "Export & Reports")
             except (ImportError, ModuleNotFoundError):
                 show_placeholder_page("📤 Export & Reports")
             
         elif page == "⚙️ Settings":
             try:
-                from pages import settings
+                from views import settings
                 load_page(settings, "Settings")
             except (ImportError, ModuleNotFoundError):
                 show_placeholder_page("⚙️ Settings")
@@ -122,7 +122,7 @@ def main():
         elif page == "👨‍💼 Admin Panel":
             if st.session_state.role == "admin":
                 try:
-                    from pages import admin
+                    from views import admin
                     load_page(admin, "Admin Panel")
                 except (ImportError, ModuleNotFoundError):
                     show_placeholder_page("👨‍💼 Admin Panel")
@@ -131,7 +131,7 @@ def main():
                 
     except Exception as e:
         st.error(f"❌ Error loading page: {str(e)}")
-        st.info("💡 Make sure all required page files exist in the `pages/` folder")
+        st.info("💡 Make sure all required page files exist in the `views/` folder")
     
     # Footer
     st.sidebar.markdown("---")
