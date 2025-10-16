@@ -21,13 +21,19 @@ def hash_password(password: str) -> str:
     return f"{salt}:{hashed}"
 
 def verify_password(password: str, hashed_password: str) -> bool:
-    """Verify a password against a hashed password"""
+    """Verify a password against a hashed password (supports old and new formats)"""
     try:
-        salt, original_hash = hashed_password.split(':')
-        password_salt = f"{password}{salt}"
-        new_hash = hashlib.sha256(password_salt.encode()).hexdigest()
-        return new_hash == original_hash
-    except (ValueError, AttributeError):
+        # New format: salt:hash
+        if ':' in hashed_password:
+            salt, original_hash = hashed_password.split(':', 1)
+            password_salt = f"{password}{salt}"
+            new_hash = hashlib.sha256(password_salt.encode()).hexdigest()
+            return new_hash == original_hash
+        else:
+            # Old format: direct hash (no salt) - for backwards compatibility
+            direct_hash = hashlib.sha256(password.encode()).hexdigest()
+            return direct_hash == hashed_password
+    except (ValueError, AttributeError, TypeError):
         return False
 
 def validate_password_strength(password: str) -> tuple:
@@ -113,8 +119,39 @@ def update_activity():
 
 def load_users():
     """Load users from JSON file"""
-    if not USERS_FILE.exists():
-        # Create default admin user if no users exist
+    try:
+        if not USERS_FILE.exists():
+            # Create default admin user if no users exist
+            default_users = {
+                "admin": {
+                    "password": hash_password("admin123"),
+                    "role": "admin",
+                    "created_at": datetime.now().isoformat()
+                }
+            }
+            save_json(USERS_FILE, default_users)
+            return default_users
+        
+        users = load_json(USERS_FILE, {})
+        
+        # Validate users data structure
+        if not isinstance(users, dict):
+            raise ValueError("Invalid users data structure")
+        
+        # Ensure admin user exists with correct structure
+        if "admin" not in users or not isinstance(users.get("admin"), dict):
+            users["admin"] = {
+                "password": hash_password("admin123"),
+                "role": "admin",
+                "created_at": datetime.now().isoformat()
+            }
+            save_json(USERS_FILE, users)
+        
+        return users
+        
+    except Exception as e:
+        print(f"Error loading users: {e}")
+        # Return default admin user on any error
         default_users = {
             "admin": {
                 "password": hash_password("admin123"),
@@ -124,7 +161,6 @@ def load_users():
         }
         save_json(USERS_FILE, default_users)
         return default_users
-    return load_json(USERS_FILE)
 
 def save_users(users):
     """Save users to JSON file"""
@@ -132,16 +168,36 @@ def save_users(users):
 
 def authenticate(username, password):
     """Authenticate user credentials"""
-    users = load_users()
-    
-    if username not in users:
+    try:
+        users = load_users()
+        
+        if username not in users:
+            return False, None
+        
+        user_data = users[username]
+        
+        # Check if password field exists
+        if 'password' not in user_data:
+            # User data is corrupted, recreate default admin if this is admin
+            if username == "admin":
+                users[username]['password'] = hash_password("admin123")
+                save_users(users)
+                user_data = users[username]
+            else:
+                return False, None
+        
+        if verify_password(password, user_data['password']):
+            # Automatically upgrade old password format to new format
+            if ':' not in user_data['password']:
+                users[username]['password'] = hash_password(password)
+                save_users(users)
+            
+            return True, user_data.get('role', 'user')
+        
         return False, None
-    
-    user_data = users[username]
-    if verify_password(password, user_data['password']):
-        return True, user_data['role']
-    
-    return False, None
+    except Exception as e:
+        print(f"Authentication error: {e}")
+        return False, None
 
 # ============================================================================
 # Login/Logout Functions
