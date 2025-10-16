@@ -1,14 +1,83 @@
 import streamlit as st
 import hashlib
 import json
+import secrets
 from datetime import datetime, timedelta
 from pathlib import Path
-from utils.security import verify_password, hash_password
-from utils.file_manager import load_json, save_json
 
 DATA_DIR = Path("data")
 USERS_FILE = DATA_DIR / "users.json"
 SESSION_TIMEOUT_MINUTES = 30
+
+# ============================================================================
+# Security Functions (self-contained)
+# ============================================================================
+
+def hash_password(password: str) -> str:
+    """Hash a password using SHA-256 with a salt"""
+    salt = secrets.token_hex(16)
+    password_salt = f"{password}{salt}"
+    hashed = hashlib.sha256(password_salt.encode()).hexdigest()
+    return f"{salt}:{hashed}"
+
+def verify_password(password: str, hashed_password: str) -> bool:
+    """Verify a password against a hashed password"""
+    try:
+        salt, original_hash = hashed_password.split(':')
+        password_salt = f"{password}{salt}"
+        new_hash = hashlib.sha256(password_salt.encode()).hexdigest()
+        return new_hash == original_hash
+    except (ValueError, AttributeError):
+        return False
+
+def validate_password_strength(password: str) -> tuple:
+    """Validate password strength"""
+    if len(password) < 6:
+        return False, "Password must be at least 6 characters long"
+    if len(password) > 128:
+        return False, "Password must be less than 128 characters"
+    has_letter = any(char.isalpha() for char in password)
+    if not has_letter:
+        return False, "Password must contain at least one letter"
+    return True, "Password is valid"
+
+# ============================================================================
+# File Management Functions (self-contained)
+# ============================================================================
+
+def load_json(file_path: Path, default=None):
+    """Load JSON data from file"""
+    try:
+        if not file_path.exists():
+            return default if default is not None else {}
+        with open(file_path, 'r', encoding='utf-8') as f:
+            return json.load(f)
+    except json.JSONDecodeError:
+        return default if default is not None else {}
+    except Exception as e:
+        print(f"Error loading {file_path}: {e}")
+        return default if default is not None else {}
+
+def save_json(file_path: Path, data, indent: int = 2):
+    """Save data to JSON file"""
+    try:
+        file_path.parent.mkdir(parents=True, exist_ok=True)
+        
+        # Create backup if file exists
+        if file_path.exists():
+            backup_path = file_path.with_suffix('.json.bak')
+            import shutil
+            shutil.copy2(file_path, backup_path)
+        
+        with open(file_path, 'w', encoding='utf-8') as f:
+            json.dump(data, f, indent=indent, ensure_ascii=False)
+    except Exception as e:
+        print(f"Error saving {file_path}: {e}")
+        raise
+
+# ============================================================================
+# Session Management
+# ============================================================================
 
 def init_session_state():
     """Initialize session state variables"""
@@ -28,7 +97,6 @@ def check_session_timeout():
     if st.session_state.logged_in and st.session_state.last_activity:
         last_activity = datetime.fromisoformat(st.session_state.last_activity)
         if datetime.now() - last_activity > timedelta(minutes=SESSION_TIMEOUT_MINUTES):
-            # Session expired
             logout()
             st.warning(f"⏱️ Your session has expired after {SESSION_TIMEOUT_MINUTES} minutes of inactivity. Please login again.")
             return True
@@ -38,6 +106,10 @@ def update_activity():
     """Update last activity timestamp"""
     if st.session_state.logged_in:
         st.session_state.last_activity = datetime.now().isoformat()
+
+# ============================================================================
+# User Management
+# ============================================================================
 
 def load_users():
     """Load users from JSON file"""
@@ -71,6 +143,10 @@ def authenticate(username, password):
     
     return False, None
 
+# ============================================================================
+# Login/Logout Functions
+# ============================================================================
+
 def login(username, role):
     """Set user as logged in"""
     st.session_state.logged_in = True
@@ -78,19 +154,15 @@ def login(username, role):
     st.session_state.role = role
     st.session_state.login_time = datetime.now().isoformat()
     st.session_state.last_activity = datetime.now().isoformat()
-    
-    # Log the login event
     log_audit_event("login", username, "User logged in successfully")
 
 def logout():
     """Clear session and log out user"""
     username = st.session_state.get('username', 'Unknown')
     
-    # Log the logout event
     if st.session_state.logged_in:
         log_audit_event("logout", username, "User logged out")
     
-    # Clear session state
     st.session_state.logged_in = False
     st.session_state.username = None
     st.session_state.role = None
@@ -103,7 +175,7 @@ def log_audit_event(event_type, username, description):
     
     audit_logs = []
     if audit_file.exists():
-        audit_logs = load_json(audit_file)
+        audit_logs = load_json(audit_file, [])
     
     audit_logs.append({
         "timestamp": datetime.now().isoformat(),
@@ -118,9 +190,12 @@ def log_audit_event(event_type, username, description):
     
     save_json(audit_file, audit_logs)
 
+# ============================================================================
+# UI Functions
+# ============================================================================
+
 def show_login_ui():
     """Display login form and handle authentication"""
-    # Initialize session state
     init_session_state()
     
     # Check for session timeout
@@ -165,7 +240,6 @@ def show_login_ui():
                     login(username, role)
                     st.success(f"✅ Welcome back, {username}!")
                     st.balloons()
-                    # Use st.rerun() instead of st.experimental_rerun()
                     st.rerun()
                 else:
                     st.error("❌ Invalid username or password")
@@ -198,31 +272,9 @@ def show_user_info():
                 logout()
                 st.rerun()
 
-def require_auth(role_required=None):
-    """Decorator to require authentication for a page"""
-    def decorator(func):
-        def wrapper(*args, **kwargs):
-            init_session_state()
-            
-            # Check session timeout
-            if check_session_timeout():
-                return False
-            
-            if not st.session_state.logged_in:
-                st.warning("⚠️ Please login to access this page")
-                return False
-            
-            # Update activity timestamp
-            update_activity()
-            
-            # Check role if specified
-            if role_required and st.session_state.role != role_required:
-                st.error(f"❌ Access denied. This page requires {role_required} role.")
-                return False
-            
-            return func(*args, **kwargs)
-        return wrapper
-    return decorator
+# ============================================================================
+# Additional User Management Functions
+# ============================================================================
 
 def change_password(username, old_password, new_password):
     """Change user password"""
@@ -289,3 +341,26 @@ def get_all_users():
         }
         for username, data in users.items()
     }
+
+def require_auth(role_required=None):
+    """Decorator to require authentication for a page"""
+    def decorator(func):
+        def wrapper(*args, **kwargs):
+            init_session_state()
+            
+            if check_session_timeout():
+                return False
+            
+            if not st.session_state.logged_in:
+                st.warning("⚠️ Please login to access this page")
+                return False
+            
+            update_activity()
+            
+            if role_required and st.session_state.role != role_required:
+                st.error(f"❌ Access denied. This page requires {role_required} role.")
+                return False
+            
+            return func(*args, **kwargs)
+        return wrapper
+    return decorator
