@@ -1,121 +1,170 @@
-"""
-Settings and Maintenance Page
-"""
 import streamlit as st
-import pandas as pd
-import json
-import os
-from datetime import datetime, timedelta
-from utils.security import verify_password, validate_password_strength, hash_password
-from utils.file_manager import load_users, save_users, load_records, save_records, add_audit_log
-from config.settings import DATA_FILE, USERS_FILE, AUDIT_FILE
-
+from auth.authentication import change_password, SESSION_TIMEOUT_MINUTES
+from utils.security import validate_password_strength
+from datetime import datetime
 
 def show():
     """Display settings page"""
-    st.title("⚙️ Settings & Maintenance")
-    
-    if st.session_state.role != "Admin":
-        st.error("❌ Admin access required")
-        return
-    
-    # Change Password Section
-    st.markdown("## 🔑 Change Your Password")
-    with st.form("change_pwd_form"):
-        old_pwd = st.text_input("Current Password", type="password")
-        new_pwd = st.text_input("New Password", type="password")
-        confirm_pwd = st.text_input("Confirm New Password", type="password")
-        
-        if st.form_submit_button("🔐 Change Password"):
-            users = load_users()
-            current_user_data = users[st.session_state.username]
-            
-            if not verify_password(old_pwd, current_user_data['password_hash']):
-                st.error("❌ Current password is incorrect")
-            elif new_pwd != confirm_pwd:
-                st.error("❌ New passwords don't match")
-            else:
-                valid, msg = validate_password_strength(new_pwd)
-                if not valid:
-                    st.error(msg)
-                else:
-                    users[st.session_state.username]['password_hash'] = hash_password(new_pwd)
-                    if save_users(users):
-                        add_audit_log("CHANGE_PASSWORD", st.session_state.username)
-                        st.success("✅ Password changed successfully")
-                    else:
-                        st.error("❌ Failed to save new password")
-    
+    st.title("⚙️ Settings")
     st.markdown("---")
     
-    # Data Maintenance Section
-    st.markdown("## 📊 Data Maintenance")
+    # Create tabs
+    tab1, tab2, tab3 = st.tabs(["🔐 Change Password", "👤 Profile", "ℹ️ About"])
     
-    records = load_records()
-    st.metric("Total Records", len(records))
+    with tab1:
+        show_change_password()
     
-    col1, col2 = st.columns(2)
+    with tab2:
+        show_profile_info()
+    
+    with tab3:
+        show_about_info()
+
+def show_change_password():
+    """Show change password form"""
+    st.header("Change Password")
+    st.markdown("Update your account password")
+    
+    col1, col2 = st.columns([2, 1])
     
     with col1:
-        st.markdown("#### 🧹 Clean Old Records")
-        days_old = st.slider("Delete records older than (days)", 0, 365, 90)
-        
-        if st.button("🗑️ Delete Old Records"):
-            cutoff_date = (datetime.now() - timedelta(days=days_old)).date()
-            original_count = len(records)
-            
-            records = [r for r in records if pd.to_datetime(r.date).date() > cutoff_date]
-            deleted = original_count - len(records)
-            
-            if save_records(records):
-                add_audit_log("DELETE_OLD_RECORDS", st.session_state.username, f"Deleted {deleted} records")
-                st.success(f"✅ Deleted {deleted} records")
-            else:
-                st.error("❌ Failed to delete records")
-    
-    with col2:
-        st.markdown("#### 📋 Export All Data")
-        if st.button("📤 Export All Records"):
-            data = [r.to_dict() for r in records]
-            json_str = json.dumps(data, ensure_ascii=False, indent=2)
-            st.download_button(
-                "📥 Download JSON",
-                json_str,
-                f"all_records_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json",
-                "application/json"
+        with st.form("change_password_form"):
+            current_password = st.text_input(
+                "Current Password",
+                type="password",
+                help="Enter your current password"
             )
+            
+            new_password = st.text_input(
+                "New Password",
+                type="password",
+                help="Enter your new password (minimum 6 characters)"
+            )
+            
+            confirm_password = st.text_input(
+                "Confirm New Password",
+                type="password",
+                help="Re-enter your new password"
+            )
+            
+            submit = st.form_submit_button("Change Password", use_container_width=True)
+            
+            if submit:
+                # Validate inputs
+                if not current_password or not new_password or not confirm_password:
+                    st.error("❌ Please fill in all fields")
+                elif new_password != confirm_password:
+                    st.error("❌ New passwords do not match")
+                else:
+                    # Validate password strength
+                    is_valid, message = validate_password_strength(new_password)
+                    
+                    if not is_valid:
+                        st.error(f"❌ {message}")
+                    else:
+                        # Attempt to change password
+                        success, result_message = change_password(
+                            st.session_state.username,
+                            current_password,
+                            new_password
+                        )
+                        
+                        if success:
+                            st.success(f"✅ {result_message}")
+                            st.info("Please login again with your new password on next session.")
+                        else:
+                            st.error(f"❌ {result_message}")
     
-    st.markdown("---")
-    
-    # System Information Section
-    st.markdown("## 🔍 System Information")
+    with col2:
+        st.info("""
+        **Password Requirements:**
+        - Minimum 6 characters
+        - At least one letter
+        - Mix of letters and numbers recommended
+        """)
+
+def show_profile_info():
+    """Show user profile information"""
+    st.header("Profile Information")
     
     col1, col2 = st.columns(2)
     
     with col1:
-        st.markdown("**Statistics**")
-        records = load_records()
-        users = load_users()
+        st.markdown("### Account Details")
+        st.markdown(f"**Username:** `{st.session_state.username}`")
+        st.markdown(f"**Role:** `{st.session_state.role.upper()}`")
         
-        st.write(f"- Total Records: **{len(records)}**")
-        st.write(f"- Total Users: **{len(users)}**")
-        st.write(f"- Admin Users: **{sum(1 for u in users.values() if u['role'] == 'Admin')}**")
-        
-        if records:
-            dates = [pd.to_datetime(r.date).date() for r in records]
-            st.write(f"- Date Range: **{min(dates)} to {max(dates)}**")
+        if st.session_state.login_time:
+            login_time = datetime.fromisoformat(st.session_state.login_time)
+            st.markdown(f"**Login Time:** {login_time.strftime('%Y-%m-%d %H:%M:%S')}")
     
     with col2:
-        st.markdown("**File Information**")
+        st.markdown("### Session Information")
+        st.markdown(f"**Session Timeout:** {SESSION_TIMEOUT_MINUTES} minutes")
         
-        try:
-            data_size = os.path.getsize(DATA_FILE) / 1024
-            users_size = os.path.getsize(USERS_FILE) / 1024
-            audit_size = os.path.getsize(AUDIT_FILE) / 1024 if os.path.exists(AUDIT_FILE) else 0
+        if st.session_state.last_activity:
+            last_activity = datetime.fromisoformat(st.session_state.last_activity)
+            st.markdown(f"**Last Activity:** {last_activity.strftime('%H:%M:%S')}")
             
-            st.write(f"- Data File: **{data_size:.1f} KB**")
-            st.write(f"- Users File: **{users_size:.1f} KB**")
-            st.write(f"- Audit Log: **{audit_size:.1f} KB**")
-            st.write(f"- Total: **{(data_size + users_size + audit_size):.1f} KB**")
-        except Exception as e:
-            st.error(f"Error getting file info: {e}")
+            time_elapsed = (datetime.now() - last_activity).seconds // 60
+            time_remaining = SESSION_TIMEOUT_MINUTES - time_elapsed
+            
+            if time_remaining > 0:
+                st.markdown(f"**Time Until Logout:** {time_remaining} minutes")
+                
+                # Progress bar for session timeout
+                progress = time_elapsed / SESSION_TIMEOUT_MINUTES
+                st.progress(progress)
+            else:
+                st.warning("Session expired - you will be logged out shortly")
+
+def show_about_info():
+    """Show about information"""
+    st.header("About Cycle Time Recorder")
+    
+    st.markdown("""
+    ### 📊 Cycle Time Recorder v1.0
+    
+    A comprehensive application for recording and analyzing manufacturing cycle times.
+    
+    **Features:**
+    - ✅ Real-time data entry
+    - ✅ Historical record viewing and editing
+    - ✅ Advanced analytics dashboard
+    - ✅ Export to multiple formats
+    - ✅ User authentication and role management
+    - ✅ Automatic session management (30-minute timeout)
+    - ✅ Audit logging
+    
+    **Session Management:**
+    - Sessions automatically expire after 30 minutes of inactivity
+    - Your session persists across page refreshes
+    - Activity is tracked on each page interaction
+    
+    **Security Features:**
+    - Encrypted password storage
+    - Session timeout protection
+    - Audit trail for all user actions
+    - Role-based access control
+    
+    ---
+    
+    **Technical Information:**
+    - Built with Streamlit
+    - Python-based backend
+    - JSON data storage
+    - SHA-256 password hashing
+    
+    ---
+    
+    © 2024 Cycle Time Recorder | All rights reserved
+    """)
+    
+    # System info
+    with st.expander("📋 System Information"):
+        st.markdown(f"""
+        **Current User:** {st.session_state.username}  
+        **Role:** {st.session_state.role}  
+        **Session Timeout:** {SESSION_TIMEOUT_MINUTES} minutes  
+        **Login Status:** {"✅ Active" if st.session_state.logged_in else "❌ Not logged in"}
+        """)
