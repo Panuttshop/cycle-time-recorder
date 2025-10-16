@@ -132,4 +132,4 @@ def show():
                     add_audit_log("CREATE_RECORDS", st.session_state.username, f"Added {count} records")
                     st.success(f"✅ บันทึก {count} Station เรียบร้อย")
                     time.sleep(1)
-                    st.experimental_rerun()
+                    st.rerun()
