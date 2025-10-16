@@ -1,9 +1,4 @@
-"""
-Authentication Package
-"""
-from auth.authentication import (
-    do_login, do_logout, show_login_ui,
-    add_user, remove_user
-)
+# Authentication module
+# This file can be empty or contain minimal imports
 
-__all__ = ['do_login', 'do_logout', 'show_login_ui', 'add_user', 'remove_user']
+__version__ = "1.0.0"
