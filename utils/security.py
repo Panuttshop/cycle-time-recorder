@@ -1,59 +1,52 @@
-"""
-Security and Password Management
-"""
 import hashlib
 import secrets
-import logging
-from typing import Tuple, Optional
 
-logger = logging.getLogger(__name__)
-
-# Password requirements (defined here to avoid circular import)
-PASSWORD_MIN_LENGTH = 8
-
-
-def hash_password(password: str, salt: Optional[str] = None) -> str:
+def hash_password(password: str) -> str:
     """
-    Hash password using PBKDF2
+    Hash a password using SHA-256 with a salt
     
     Args:
         password: Plain text password
-        salt: Optional salt (generated if not provided)
         
     Returns:
         Hashed password with salt
     """
-    if salt is None:
-        salt = secrets.token_hex(16)
+    # Generate a random salt
+    salt = secrets.token_hex(16)
     
-    pwd_hash = hashlib.pbkdf2_hmac('sha256', password.encode('utf-8'), 
-                                    salt.encode('utf-8'), 100000)
-    return f"{salt}${pwd_hash.hex()}"
+    # Combine password and salt, then hash
+    password_salt = f"{password}{salt}"
+    hashed = hashlib.sha256(password_salt.encode()).hexdigest()
+    
+    # Return salt and hash combined
+    return f"{salt}:{hashed}"
 
-
-def verify_password(password: str, hashed: str) -> bool:
+def verify_password(password: str, hashed_password: str) -> bool:
     """
-    Verify password against hash
+    Verify a password against a hashed password
     
     Args:
-        password: Plain text password
-        hashed: Hashed password with salt
+        password: Plain text password to verify
+        hashed_password: Hashed password with salt (format: salt:hash)
         
     Returns:
-        True if password matches
+        True if password matches, False otherwise
     """
     try:
-        if '$' not in hashed:
-            return False
+        # Split salt and hash
+        salt, original_hash = hashed_password.split(':')
         
-        salt, pwd_hash = hashed.split('$', 1)
-        return hash_password(password, salt) == hashed
-    except Exception as e:
-        logger.error(f"Password verification error: {e}")
+        # Hash the provided password with the same salt
+        password_salt = f"{password}{salt}"
+        new_hash = hashlib.sha256(password_salt.encode()).hexdigest()
+        
+        # Compare hashes
+        return new_hash == original_hash
+    except (ValueError, AttributeError):
+        # Handle malformed hashed_password
         return False
 
-
-def validate_password_strength(password: str) -> Tuple[bool, str]:
+def validate_password_strength(password: str) -> tuple[bool, str]:
     """
     Validate password strength
     
@@ -61,12 +54,36 @@ def validate_password_strength(password: str) -> Tuple[bool, str]:
         password: Password to validate
         
     Returns:
-        Tuple of (is_valid, error_message)
+        Tuple of (is_valid, message)
     """
-    if len(password) < PASSWORD_MIN_LENGTH:
-        return False, f"รหัสผ่านต้องยาวอย่างน้อย {PASSWORD_MIN_LENGTH} ตัวอักษร"
-    if not any(c.isupper() for c in password):
-        return False, "รหัสผ่านต้องมีอักษรตัวใหญ่"
-    if not any(c.isdigit() for c in password):
-        return False, "รหัสผ่านต้องมีตัวเลข"
-    return True, ""
+    if len(password) < 6:
+        return False, "Password must be at least 6 characters long"
+    
+    if len(password) > 128:
+        return False, "Password must be less than 128 characters"
+    
+    # Check for at least one number or special character (optional but recommended)
+    has_number = any(char.isdigit() for char in password)
+    has_letter = any(char.isalpha() for char in password)
+    
+    if not has_letter:
+        return False, "Password must contain at least one letter"
+    
+    return True, "Password is valid"
+
+def generate_random_password(length: int = 12) -> str:
+    """
+    Generate a random secure password
+    
+    Args:
+        length: Length of password (default: 12)
+        
+    Returns:
+        Random password string
+    """
+    import string
+    
+    alphabet = string.ascii_letters + string.digits + "!@#$%^&*"
+    password = ''.join(secrets.choice(alphabet) for _ in range(length))
+    
+    return password
