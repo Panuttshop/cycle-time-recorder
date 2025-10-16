@@ -1,82 +1,96 @@
-"""
-Cycle Time Recorder - Main Entry Point
-"""
 import streamlit as st
-from config.settings import PAGE_CONFIG
-from auth.authentication import show_login_ui
-from views import main_entry, view_edit, analytics, export, admin, settings
-from utils.file_manager import ensure_files
+from pathlib import Path
+from auth.authentication import (
+    show_login_ui, 
+    show_user_info, 
+    init_session_state,
+    check_session_timeout
+)
 
-st.set_page_config(**PAGE_CONFIG)
+# Page configuration
+st.set_page_config(
+    page_title="Cycle Time Recorder",
+    page_icon="⏱️",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
 
+# Create data directory if it doesn't exist
+DATA_DIR = Path("data")
+DATA_DIR.mkdir(exist_ok=True)
 
-def init_session_state():
-    """Initialize session variables"""
-    defaults = {
-        "logged_in": False,
-        "username": None,
-        "role": "",
-        "login_attempts": {},
-        "model": "",
-        "record_date": None,
-        "last_activity": None
-    }
-    
-    for key, value in defaults.items():
-        if key not in st.session_state:
-            st.session_state[key] = value
-
+def load_page(page_module, page_name):
+    """Load a page module safely"""
+    try:
+        return page_module.show()
+    except Exception as e:
+        st.error(f"Error loading {page_name}: {str(e)}")
+        st.exception(e)
 
 def main():
-    """Main application entry point"""
+    # Initialize session state
     init_session_state()
-    ensure_files()
     
+    # Check if user is logged in
     logged_in = show_login_ui()
     
     if not logged_in:
-        st.title("📊 Cycle Time Recorder")
-        st.markdown("""
-        ### 🔐 Login Required
-        กรุณาล็อกอินจาก sidebar
-        
-        #### ✨ Features
-        - 🔐 Secure login with audit trail
-        - 📊 บันทึก Cycle Time หลาย Station
-        - ✏️ แก้ไขและลบข้อมูล
-        - 🔍 ค้นหากรองข้อมูล
-        - 📈 Analytics & reporting
-        - 👥 User management (Admin)
-        - 📋 Audit trail logging
-        - 💾 Data backup & export
-        - ⚙️ System settings
-        
-        
-        """)
         return
+    
+    # Show user info in sidebar
+    show_user_info()
+    
+    # Sidebar navigation
+    st.sidebar.title("⏱️ Cycle Time Recorder")
+    st.sidebar.markdown("---")
+    
+    # Navigation menu
+    page = st.sidebar.radio(
+        "Navigation",
+        [
+            "📝 Data Entry",
+            "👁️ View & Edit Records",
+            "📊 Analytics Dashboard",
+            "📤 Export & Reports",
+            "⚙️ Settings",
+            "👨‍💼 Admin Panel"
+        ],
+        key="navigation"
+    )
     
     st.sidebar.markdown("---")
     
-    menu_items = ["📊 Entry", "📋 View/Edit", "📈 Analytics", "📤 Export"]
-    if st.session_state.role == "Admin":
-        menu_items.extend(["🔒 Admin", "⚙️ Settings"])
+    # Load the selected page
+    if page == "📝 Data Entry":
+        from pages import main_entry
+        load_page(main_entry, "Data Entry")
+        
+    elif page == "👁️ View & Edit Records":
+        from pages import view_edit
+        load_page(view_edit, "View & Edit Records")
+        
+    elif page == "📊 Analytics Dashboard":
+        from pages import analytics
+        load_page(analytics, "Analytics Dashboard")
+        
+    elif page == "📤 Export & Reports":
+        from pages import export
+        load_page(export, "Export & Reports")
+        
+    elif page == "⚙️ Settings":
+        from pages import settings
+        load_page(settings, "Settings")
+        
+    elif page == "👨‍💼 Admin Panel":
+        from pages import admin
+        if st.session_state.role == "admin":
+            load_page(admin, "Admin Panel")
+        else:
+            st.error("❌ Access denied. Admin privileges required.")
     
-    st.sidebar.write("**Navigation:**")
-    choice = st.sidebar.radio("", menu_items)
-    
-    if choice == "📊 Entry":
-        main_entry.show()
-    elif choice == "📋 View/Edit":
-        view_edit.show()
-    elif choice == "📈 Analytics":
-        analytics.show()
-    elif choice == "📤 Export":
-        export.show()
-    elif choice == "🔒 Admin":
-        admin.show()
-    elif choice == "⚙️ Settings":
-        settings.show()
-
+    # Footer
+    st.sidebar.markdown("---")
+    st.sidebar.caption("© 2024 Cycle Time Recorder v1.0")
 
 if __name__ == "__main__":
     main()
