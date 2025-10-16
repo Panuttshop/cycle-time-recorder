@@ -108,7 +108,7 @@ def show():
                             add_audit_log("EDIT_RECORD", st.session_state.username, f"Edited: {rec.model} - {rec.station}")
                             st.success("✅ แก้ไขเรียบร้อย")
                             time.sleep(1)
-                            st.experimental_rerun()
+                            st.rerun()
         
         with col2:
             st.subheader("🗑️ ลบ")
@@ -121,4 +121,4 @@ def show():
                     add_audit_log("DELETE_RECORD", st.session_state.username, f"Deleted: {rec.model} - {rec.station}")
                     st.success("✅ ลบเรียบร้อย")
                     time.sleep(1)
-                    st.experimental_rerun()
+                    st.rerun()
