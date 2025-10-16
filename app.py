@@ -4,7 +4,7 @@ Cycle Time Recorder - Main Entry Point
 import streamlit as st
 from config.settings import PAGE_CONFIG
 from auth.authentication import show_login_ui
-from pages import main_entry, view_edit, analytics, export, admin, settings
+from views import main_entry, view_edit, analytics, export, admin, settings
 from utils.file_manager import ensure_files
 
 st.set_page_config(**PAGE_CONFIG)
@@ -51,7 +51,7 @@ def main():
         - 💾 Data backup & export
         - ⚙️ System settings
         
-       
+        
         """)
         return
     
