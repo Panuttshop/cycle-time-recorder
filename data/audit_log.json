@@ -316,5 +316,11 @@
     "action": "EDIT_RECORD",
     "username": "29006406",
     "details": "Edited: DC-2317 - M-10"
+  },
+  {
+    "timestamp": "2025-10-16T07:58:49.866783",
+    "action": "LOGIN",
+    "username": "admin",
+    "details": ""
   }
 ]

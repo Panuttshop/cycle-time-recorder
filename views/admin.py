@@ -39,7 +39,7 @@ def show():
                     if ok:
                         st.success(msg)
                         time.sleep(1)
-                        st.rerun()
+                        st.experimental_rerun()
                     else:
                         st.error(msg)
     
@@ -58,7 +58,7 @@ def show():
                     if ok:
                         st.success(msg)
                         time.sleep(1)
-                        st.rerun()
+                        st.experimental_rerun()
                     else:
                         st.error(msg)
         else:
