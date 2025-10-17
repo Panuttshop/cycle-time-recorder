@@ -1,24 +1,9 @@
 """
-Authentication package initialization
+Authentication Package
 """
 from auth.authentication import (
-    show_login_ui,
-    logout,
-    is_admin,
-    require_auth,
-    require_admin,
-    create_user,
-    change_password,
-    delete_user
+    do_login, do_logout, show_login_ui,
+    add_user, remove_user
 )
 
-__all__ = [
-    'show_login_ui',
-    'logout',
-    'is_admin',
-    'require_auth',
-    'require_admin',
-    'create_user',
-    'change_password',
-    'delete_user'
-]
+__all__ = ['do_login', 'do_logout', 'show_login_ui', 'add_user', 'remove_user']
