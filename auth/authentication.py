@@ -1,60 +1,17 @@
 import streamlit as st
-import hashlib
 import json
-import secrets
 from datetime import datetime, timedelta
 from pathlib import Path
+
+# Import YOUR existing security functions
+from utils.security import hash_password, verify_password
 
 DATA_DIR = Path("data")
 USERS_FILE = DATA_DIR / "users.json"
 SESSION_TIMEOUT_MINUTES = 30
 
 # ============================================================================
-# Security Functions (self-contained)
-# ============================================================================
-
-def hash_password(password: str) -> str:
-    """Hash a password using SHA-256 with a salt (YOUR FORMAT)"""
-    salt = secrets.token_hex(16)
-    password_salt = f"{password}{salt}"
-    hashed = hashlib.sha256(password_salt.encode()).hexdigest()
-    return f"{salt}${hashed}"  # Using $ separator like your format
-
-def verify_password(password: str, password_hash: str) -> bool:
-    """Verify a password against a hashed password (YOUR FORMAT)"""
-    try:
-        # Your format: salt$hash
-        if '$' in password_hash:
-            salt, original_hash = password_hash.split('$', 1)
-            password_salt = f"{password}{salt}"
-            new_hash = hashlib.sha256(password_salt.encode()).hexdigest()
-            return new_hash == original_hash
-        # Old format fallback: salt:hash
-        elif ':' in password_hash:
-            salt, original_hash = password_hash.split(':', 1)
-            password_salt = f"{password}{salt}"
-            new_hash = hashlib.sha256(password_salt.encode()).hexdigest()
-            return new_hash == original_hash
-        else:
-            # Direct hash (no salt) - for backwards compatibility
-            direct_hash = hashlib.sha256(password.encode()).hexdigest()
-            return direct_hash == password_hash
-    except (ValueError, AttributeError, TypeError):
-        return False
-
-def validate_password_strength(password: str) -> tuple:
-    """Validate password strength"""
-    if len(password) < 6:
-        return False, "Password must be at least 6 characters long"
-    if len(password) > 128:
-        return False, "Password must be less than 128 characters"
-    has_letter = any(char.isalpha() for char in password)
-    if not has_letter:
-        return False, "Password must contain at least one letter"
-    return True, "Password is valid"
-
-# ============================================================================
-# File Management Functions (self-contained)
+# File Management Functions
 # ============================================================================
 
 def load_json(file_path: Path, default=None):
@@ -75,7 +32,6 @@ def save_json(file_path: Path, data, indent: int = 2):
     try:
         file_path.parent.mkdir(parents=True, exist_ok=True)
         
-        # Create backup if file exists
         if file_path.exists():
             backup_path = file_path.with_suffix('.json.bak')
             import shutil
@@ -107,7 +63,7 @@ def init_session_state():
         st.session_state.login_time = None
 
 def check_session_timeout():
-    """Check if session has timed out (30 minutes of inactivity)"""
+    """Check if session has timed out"""
     if st.session_state.logged_in and st.session_state.last_activity:
         last_activity = datetime.fromisoformat(st.session_state.last_activity)
         if datetime.now() - last_activity > timedelta(minutes=SESSION_TIMEOUT_MINUTES):
@@ -126,23 +82,13 @@ def update_activity():
 # ============================================================================
 
 def load_users():
-    """Load users from JSON file (YOUR FORMAT)"""
+    """Load users from JSON file"""
     try:
         if not USERS_FILE.exists():
-            # Create default admin user if no users exist
-            default_users = {
-                "admin": {
-                    "password_hash": hash_password("admin123"),
-                    "role": "Admin",  # Capitalized like your format
-                    "created_at": datetime.now().isoformat()
-                }
-            }
-            save_json(USERS_FILE, default_users)
-            return default_users
+            return {}
         
         users = load_json(USERS_FILE, {})
         
-        # Validate users data structure
         if not isinstance(users, dict):
             raise ValueError("Invalid users data structure")
         
@@ -150,23 +96,14 @@ def load_users():
         
     except Exception as e:
         print(f"Error loading users: {e}")
-        # Return default admin user on any error
-        default_users = {
-            "admin": {
-                "password_hash": hash_password("admin123"),
-                "role": "Admin",
-                "created_at": datetime.now().isoformat()
-            }
-        }
-        save_json(USERS_FILE, default_users)
-        return default_users
+        return {}
 
 def save_users(users):
     """Save users to JSON file"""
     save_json(USERS_FILE, users)
 
 def authenticate(username, password):
-    """Authenticate user credentials (YOUR FORMAT)"""
+    """Authenticate user credentials using YOUR security module"""
     try:
         users = load_users()
         
@@ -175,22 +112,24 @@ def authenticate(username, password):
         
         user_data = users[username]
         
-        # Check if password_hash field exists (YOUR FORMAT)
-        password_field = user_data.get('password_hash') or user_data.get('password')
+        # Use password_hash field (YOUR format)
+        password_hash = user_data.get('password_hash')
         
-        if not password_field:
-            # User data is corrupted
+        if not password_hash:
             return False, None, None
         
-        if verify_password(password, password_field):
-            # Return role and full_name (YOUR FORMAT)
+        # Use YOUR verify_password function from utils/security.py
+        if verify_password(password, password_hash):
             role = user_data.get('role', 'Member')
             full_name = user_data.get('full_name', username)
             return True, role, full_name
         
         return False, None, None
+        
     except Exception as e:
         print(f"Authentication error: {e}")
+        import traceback
+        traceback.print_exc()
         return False, None, None
 
 # ============================================================================
@@ -198,7 +137,7 @@ def authenticate(username, password):
 # ============================================================================
 
 def login(username, role, full_name=None):
-    """Set user as logged in (YOUR FORMAT)"""
+    """Set user as logged in"""
     st.session_state.logged_in = True
     st.session_state.username = username
     st.session_state.role = role
@@ -223,24 +162,29 @@ def logout():
 
 def log_audit_event(event_type, username, description):
     """Log audit events"""
-    audit_file = DATA_DIR / "audit_log.json"
-    
-    audit_logs = []
-    if audit_file.exists():
-        audit_logs = load_json(audit_file, [])
-    
-    audit_logs.append({
-        "timestamp": datetime.now().isoformat(),
-        "event_type": event_type,
-        "username": username,
-        "description": description
-    })
-    
-    # Keep only last 1000 entries
-    if len(audit_logs) > 1000:
-        audit_logs = audit_logs[-1000:]
-    
-    save_json(audit_file, audit_logs)
+    try:
+        # Try to use your existing audit log function
+        from utils.file_manager import add_audit_log
+        add_audit_log(event_type, username, description)
+    except ImportError:
+        # Fallback to simple audit logging
+        audit_file = DATA_DIR / "audit_log.json"
+        
+        audit_logs = []
+        if audit_file.exists():
+            audit_logs = load_json(audit_file, [])
+        
+        audit_logs.append({
+            "timestamp": datetime.now().isoformat(),
+            "event_type": event_type,
+            "username": username,
+            "description": description
+        })
+        
+        if len(audit_logs) > 1000:
+            audit_logs = audit_logs[-1000:]
+        
+        save_json(audit_file, audit_logs)
 
 # ============================================================================
 # UI Functions
@@ -250,11 +194,9 @@ def show_login_ui():
     """Display login form and handle authentication"""
     init_session_state()
     
-    # Check for session timeout
     if check_session_timeout():
         return False
     
-    # If already logged in, update activity and return True
     if st.session_state.logged_in:
         update_activity()
         return True
@@ -269,24 +211,17 @@ def show_login_ui():
         st.markdown("### Please sign in to continue")
         
         with st.form("login_form", clear_on_submit=False):
-            username = st.text_input("👤 Username", key="login_username")
+            username = st.text_input("👤 Username / Employee ID", key="login_username")
             password = st.text_input("🔑 Password", type="password", key="login_password")
             
-            col_login, col_info = st.columns([1, 1])
-            
-            with col_login:
-                submit_button = st.form_submit_button("Login", use_container_width=True)
-            
-            with col_info:
-                st.markdown("**Default Admin:**")
-                st.caption("User: `admin`")
-                st.caption("Pass: `admin123`")
+            submit_button = st.form_submit_button("Login", use_container_width=True)
         
         if submit_button:
             if not username or not password:
                 st.error("❌ Please enter both username and password")
             else:
-                success, role, full_name = authenticate(username, password)
+                with st.spinner("Authenticating..."):
+                    success, role, full_name = authenticate(username, password)
                 
                 if success:
                     login(username, role, full_name)
@@ -305,9 +240,9 @@ def show_user_info():
         with st.sidebar:
             st.markdown("---")
             st.markdown(f"**👤 User:** {st.session_state.full_name or st.session_state.username}")
+            st.markdown(f"**🆔 ID:** {st.session_state.username}")
             st.markdown(f"**🎭 Role:** {st.session_state.role}")
             
-            # Show session info
             if st.session_state.login_time:
                 login_time = datetime.fromisoformat(st.session_state.login_time)
                 st.caption(f"Logged in: {login_time.strftime('%H:%M:%S')}")
@@ -335,12 +270,10 @@ def change_password(username, old_password, new_password):
     if username not in users:
         return False, "User not found"
     
-    # Verify old password
-    password_field = users[username].get('password_hash') or users[username].get('password')
-    if not verify_password(old_password, password_field):
+    password_hash = users[username].get('password_hash')
+    if not verify_password(old_password, password_hash):
         return False, "Incorrect current password"
     
-    # Update password
     users[username]['password_hash'] = hash_password(new_password)
     users[username]['password_changed_at'] = datetime.now().isoformat()
     
@@ -350,7 +283,7 @@ def change_password(username, old_password, new_password):
     return True, "Password changed successfully"
 
 def create_user(username, password, role="Member", full_name=None, created_by="admin"):
-    """Create a new user (YOUR FORMAT)"""
+    """Create a new user"""
     users = load_users()
     
     if username in users:
@@ -358,7 +291,7 @@ def create_user(username, password, role="Member", full_name=None, created_by="a
     
     users[username] = {
         "password_hash": hash_password(password),
-        "role": role,  # "Admin" or "Member"
+        "role": role,
         "created_at": datetime.now().isoformat(),
         "created_by": created_by
     }
@@ -372,7 +305,7 @@ def create_user(username, password, role="Member", full_name=None, created_by="a
     return True, "User created successfully"
 
 def delete_user(username, deleted_by="admin"):
-    """Delete a user (admin only)"""
+    """Delete a user"""
     if username == "admin":
         return False, "Cannot delete admin user"
     
@@ -388,7 +321,7 @@ def delete_user(username, deleted_by="admin"):
     return True, "User deleted successfully"
 
 def get_all_users():
-    """Get list of all users (admin only)"""
+    """Get list of all users"""
     users = load_users()
     return {
         username: {
@@ -398,27 +331,3 @@ def get_all_users():
         }
         for username, data in users.items()
     }
-
-def require_auth(role_required=None):
-    """Decorator to require authentication for a page"""
-    def decorator(func):
-        def wrapper(*args, **kwargs):
-            init_session_state()
-            
-            if check_session_timeout():
-                return False
-            
-            if not st.session_state.logged_in:
-                st.warning("⚠️ Please login to access this page")
-                return False
-            
-            update_activity()
-            
-            # Check role if specified (case-insensitive)
-            if role_required and st.session_state.role.lower() != role_required.lower():
-                st.error(f"❌ Access denied. This page requires {role_required} role.")
-                return False
-            
-            return func(*args, **kwargs)
-        return wrapper
-    return decorator
