@@ -9,7 +9,7 @@ def hash_password(password: str) -> str:
         password: Plain text password
         
     Returns:
-        Hashed password with salt
+        Hashed password with salt (format: salt$hash for compatibility)
     """
     # Generate a random salt
     salt = secrets.token_hex(16)
@@ -18,23 +18,31 @@ def hash_password(password: str) -> str:
     password_salt = f"{password}{salt}"
     hashed = hashlib.sha256(password_salt.encode()).hexdigest()
     
-    # Return salt and hash combined
-    return f"{salt}:{hashed}"
+    # Return salt and hash combined with $ separator (matching your users.json)
+    return f"{salt}${hashed}"
 
 def verify_password(password: str, hashed_password: str) -> bool:
     """
     Verify a password against a hashed password
+    Supports both : and $ separators for compatibility
     
     Args:
         password: Plain text password to verify
-        hashed_password: Hashed password with salt (format: salt:hash)
+        hashed_password: Hashed password with salt (format: salt:hash or salt$hash)
         
     Returns:
         True if password matches, False otherwise
     """
     try:
-        # Split salt and hash
-        salt, original_hash = hashed_password.split(':')
+        # Try $ separator first (your users.json format)
+        if '$' in hashed_password:
+            salt, original_hash = hashed_password.split('$', 1)
+        # Fall back to : separator (old format)
+        elif ':' in hashed_password:
+            salt, original_hash = hashed_password.split(':', 1)
+        else:
+            # No separator found
+            return False
         
         # Hash the provided password with the same salt
         password_salt = f"{password}{salt}"
@@ -42,7 +50,7 @@ def verify_password(password: str, hashed_password: str) -> bool:
         
         # Compare hashes
         return new_hash == original_hash
-    except (ValueError, AttributeError):
+    except (ValueError, AttributeError, TypeError):
         # Handle malformed hashed_password
         return False
 
