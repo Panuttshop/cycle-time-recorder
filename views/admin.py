@@ -1,167 +1,164 @@
+"""
+Admin Panel Page
+"""
 import streamlit as st
+import pandas as pd
+import json
+import time
 from datetime import datetime
+from auth.authentication import add_user, remove_user
+from utils.file_manager import load_users, load_records, add_audit_log
+from config.settings import DEFAULT_ADMIN, AUDIT_FILE
 
-# Import authentication functions
-try:
-    from auth.authentication import create_user, delete_user, get_all_users, load_json, validate_password_strength
-    from pathlib import Path
-    DATA_DIR = Path("data")
-except ImportError:
-    st.error("Cannot import authentication module")
 
 def show():
-    """Display admin panel (admin only)"""
-    st.title("👨‍💼 Admin Panel")
-    st.markdown("---")
+    """Display admin panel"""
+    st.title("🔒 Admin Panel")
     
-    if st.session_state.role != "admin":
-        st.error("❌ Access denied. Admin privileges required.")
-        return
-    
-    # Create tabs
-    tab1, tab2, tab3 = st.tabs(["👥 User Management", "📋 Audit Log", "🗄️ System Info"])
-    
-    with tab1:
-        show_user_management()
-    
-    with tab2:
-        show_audit_log()
-    
-    with tab3:
-        show_system_info()
-
-def show_user_management():
-    """User management interface"""
-    st.header("User Management")
-    
-    col1, col2 = st.columns([2, 1])
-    
-    with col1:
-        st.subheader("Create New User")
-        
-        with st.form("create_user_form"):
-            new_username = st.text_input("Username")
-            new_password = st.text_input("Password", type="password")
-            confirm_password = st.text_input("Confirm Password", type="password")
-            new_role = st.selectbox("Role", ["user", "admin"])
-            
-            create_btn = st.form_submit_button("Create User", use_container_width=True)
-            
-            if create_btn:
-                if not new_username or not new_password:
-                    st.error("❌ Please fill in all fields")
-                elif new_password != confirm_password:
-                    st.error("❌ Passwords do not match")
-                else:
-                    is_valid, msg = validate_password_strength(new_password)
-                    if not is_valid:
-                        st.error(f"❌ {msg}")
-                    else:
-                        success, message = create_user(
-                            new_username, 
-                            new_password, 
-                            new_role,
-                            st.session_state.username
-                        )
-                        if success:
-                            st.success(f"✅ {message}")
-                            st.rerun()
-                        else:
-                            st.error(f"❌ {message}")
-    
-    with col2:
-        st.subheader("Delete User")
-        
-        users = get_all_users()
-        user_list = [u for u in users.keys() if u != "admin"]
-        
-        if user_list:
-            with st.form("delete_user_form"):
-                user_to_delete = st.selectbox("Select User", user_list)
-                delete_btn = st.form_submit_button("Delete User", use_container_width=True, type="primary")
-                
-                if delete_btn:
-                    success, message = delete_user(user_to_delete, st.session_state.username)
-                    if success:
-                        st.success(f"✅ {message}")
-                        st.rerun()
-                    else:
-                        st.error(f"❌ {message}")
-        else:
-            st.info("No users to delete")
-    
-    st.markdown("---")
-    
-    # Display all users
-    st.subheader("All Users")
-    users = get_all_users()
-    
-    if users:
-        import pandas as pd
-        user_df = pd.DataFrame([
-            {
-                "Username": username,
-                "Role": info["role"],
-                "Created": info["created_at"]
-            }
-            for username, info in users.items()
-        ])
-        st.dataframe(user_df, use_container_width=True, hide_index=True)
-    else:
-        st.info("No users found")
-
-def show_audit_log():
-    """Display audit log"""
-    st.header("Audit Log")
-    
-    audit_file = DATA_DIR / "audit_log.json"
-    
-    if audit_file.exists():
-        audit_logs = load_json(audit_file, [])
-        
-        if audit_logs:
-            # Show recent logs
-            st.subheader(f"Recent Activities (Last {min(50, len(audit_logs))} entries)")
-            
-            import pandas as pd
-            recent_logs = audit_logs[-50:][::-1]  # Last 50, reversed
-            
-            log_df = pd.DataFrame(recent_logs)
-            st.dataframe(log_df, use_container_width=True, hide_index=True)
-            
-            # Statistics
-            col1, col2, col3 = st.columns(3)
-            
-            with col1:
-                total_events = len(audit_logs)
-                st.metric("Total Events", f"{total_events:,}")
-            
-            with col2:
-                login_events = len([l for l in audit_logs if l['event_type'] == 'login'])
-                st.metric("Total Logins", f"{login_events:,}")
-            
-            with col3:
-                failed_logins = len([l for l in audit_logs if l['event_type'] == 'failed_login'])
-                st.metric("Failed Logins", f"{failed_logins:,}")
-        else:
-            st.info("No audit logs found")
-    else:
-        st.info("Audit log file not found")
-
-def show_system_info():
-    """Display system information"""
-    st.header("System Information")
-    
-    import sys
-    from pathlib import Path
+    # User Management Section
+    st.markdown("## 👥 User Management")
     
     col1, col2 = st.columns(2)
     
     with col1:
-        st.subheader("Application Info")
-        st.markdown(f"""
-        **Version:** 1.0.0  
-        **Python:** {sys.version.split()[0]}  
-        **Streamlit:** {st.__version__}  
-        **Environment:** Production
-        """)
+        st.markdown("#### ➕ เพิ่มผู้ใช้")
+        with st.form("add_user_form"):
+            new_user = st.text_input("Username")
+            new_full_name = st.text_input("Full Name")
+            new_pass = st.text_input("Password", type="password")
+            new_pass_conf = st.text_input("Confirm Password", type="password")
+            new_role = st.selectbox("Role", ["Member", "Admin"])
+            
+            if st.form_submit_button("➕ Add User"):
+                if not new_user or not new_pass:
+                    st.error("❌ กรอก username และ password")
+                elif new_pass != new_pass_conf:
+                    st.error("❌ Password ไม่ตรงกัน")
+                else:
+                    ok, msg = add_user(new_user, new_pass, new_role, new_full_name)
+                    if ok:
+                        st.success(msg)
+                        time.sleep(1)
+                        st.experimental_rerun()
+                    else:
+                        st.error(msg)
+    
+    with col2:
+        st.markdown("#### 🗑️ ลบผู้ใช้")
+        users = load_users()
+        user_list = [u for u in users.keys() if u != DEFAULT_ADMIN[0]]
+        
+        if user_list:
+            to_remove = st.selectbox("เลือกผู้ใช้:", user_list)
+            if st.button("🗑️ Remove User"):
+                if st.session_state.username == to_remove:
+                    st.error("❌ ไม่สามารถลบบัญชีตัวเอง")
+                else:
+                    ok, msg = remove_user(to_remove)
+                    if ok:
+                        st.success(msg)
+                        time.sleep(1)
+                        st.experimental_rerun()
+                    else:
+                        st.error(msg)
+        else:
+            st.info("ไม่มีผู้ใช้ที่สามารถลบได้")
+    
+    st.markdown("---")
+    st.markdown("#### 👥 Current Users")
+    
+    users = load_users()
+    user_data = []
+    for username in users:
+        user_data.append({
+            "Username": username,
+            "Full Name": users[username].get("full_name", ""),
+            "Role": users[username]["role"]
+        })
+    
+    st.dataframe(pd.DataFrame(user_data))
+    
+    # Change User Role Section
+    st.markdown("---")
+    st.markdown("#### 🔄 Change User Role")
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        # Get list of users excluding current admin if they want to prevent self-demotion
+        user_list_for_role = [u for u in users.keys()]
+        selected_user = st.selectbox("Select User:", user_list_for_role, key="role_change_user")
+    
+    with col2:
+        if selected_user:
+            current_role = users[selected_user]["role"]
+            st.info(f"Current Role: **{current_role}**")
+            
+            new_role = st.selectbox(
+                "New Role:",
+                ["Member", "Admin"],
+                index=0 if current_role == "Member" else 1,
+                key="new_role_select"
+            )
+            
+            if st.button("🔄 Change Role"):
+                if selected_user == DEFAULT_ADMIN[0] and new_role == "Member":
+                    st.error("❌ ไม่สามารถเปลี่ยน role ของ admin เริ่มต้นเป็น Member ได้")
+                elif selected_user == st.session_state.username and new_role == "Member":
+                    st.warning("⚠️ คุณกำลังจะเปลี่ยน role ของตัวเองเป็น Member - คุณจะสูญเสียสิทธิ์ Admin!")
+                    if st.button("⚠️ ยืนยันการเปลี่ยน Role ของตัวเอง"):
+                        users[selected_user]["role"] = new_role
+                        if save_users(users):
+                            add_audit_log("CHANGE_ROLE", st.session_state.username, 
+                                        f"Changed {selected_user} role to {new_role}")
+                            st.success(f"✅ เปลี่ยน role ของ {selected_user} เป็น {new_role} เรียบร้อย")
+                            st.session_state.role = new_role  # Update current session
+                            time.sleep(2)
+                            st.experimental_rerun()
+                        else:
+                            st.error("❌ เกิดข้อผิดพลาดในการบันทึก")
+                else:
+                    users[selected_user]["role"] = new_role
+                    if save_users(users):
+                        add_audit_log("CHANGE_ROLE", st.session_state.username, 
+                                    f"Changed {selected_user} role from {current_role} to {new_role}")
+                        st.success(f"✅ เปลี่ยน role ของ {selected_user} เป็น {new_role} เรียบร้อย")
+                        time.sleep(1)
+                        st.experimental_rerun()
+                    else:
+                        st.error("❌ เกิดข้อผิดพลาดในการบันทึก")
+    
+    st.markdown("---")
+    
+    # Audit Trail Section
+    st.markdown("## 📋 Audit Trail")
+    try:
+        with open(AUDIT_FILE, 'r', encoding='utf-8') as f:
+            logs = json.load(f)
+        
+        if logs:
+            df_logs = pd.DataFrame(logs).tail(50)
+            st.dataframe(df_logs)
+        else:
+            st.info("ไม่มี log")
+    except Exception as e:
+        st.error(f"Error loading audit log: {e}")
+    
+    st.markdown("---")
+    
+    # Backup Section
+    st.markdown("## 💾 Data Backup")
+    if st.button("💾 Create Backup Now"):
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        backup_file = f"cycle_records_backup_{timestamp}.json"
+        
+        try:
+            records = load_records()
+            data = [r.to_dict() for r in records]
+            with open(backup_file, 'w', encoding='utf-8') as f:
+                json.dump(data, f, indent=2, ensure_ascii=False)
+            
+            st.success(f"✅ Backup created: {backup_file}")
+            add_audit_log("BACKUP", st.session_state.username)
+        except Exception as e:
+            st.error(f"❌ Backup failed: {e}")

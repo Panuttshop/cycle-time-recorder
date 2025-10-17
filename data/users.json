@@ -1,11 +1,14 @@
 {
   "admin": {
-    "password_hash": "temp_will_be_replaced",
-    "role": "Admin",
-    "created_at": "2024-10-16T00:00:00"
+    "password_hash": "85283770f37a433bcf49f628eb2b69c5$abf447f24848096997916c95b59447051f6f0396462f3ac360f9a5e9e150110f",
+    "role": "Admin"
+  },
+  "alice": {
+    "password_hash": "075ad8afe1ddb817a376e2077d95bf0e$60175b6f5fa9ef2dc08a328acd7405f6efacf103ee7054bf52651b063575c70b",
+    "role": "Member"
   },
   "29006406": {
-    "password_hash": "temp_will_be_replaced",
+    "password_hash": "4c27bbf1253fa82929908a249832919b$ceb9f994fc2236074a93af73fa8797e08cfa628ad9f929121c81a54e51253f92",
     "role": "Admin",
     "full_name": "Panupat Srikul"
   }

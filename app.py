@@ -1,173 +1,82 @@
+"""
+Cycle Time Recorder - Main Entry Point
+"""
 import streamlit as st
-from pathlib import Path
-from auth.authentication import (
-    show_login_ui, 
-    show_user_info, 
-    init_session_state,
-    check_session_timeout
-)
+from config.settings import PAGE_CONFIG
+from auth.authentication import show_login_ui
+from views import main_entry, view_edit, analytics, export, admin, settings
+from utils.file_manager import ensure_files
 
-# Page configuration
-st.set_page_config(
-    page_title="Cycle Time Recorder",
-    page_icon="⏱️",
-    layout="wide",
-    initial_sidebar_state="expanded"
-)
+st.set_page_config(**PAGE_CONFIG)
 
-# Create data directory if it doesn't exist
-DATA_DIR = Path("data")
-DATA_DIR.mkdir(exist_ok=True)
 
-def load_page(page_module, page_name):
-    """Load a page module safely"""
-    try:
-        return page_module.show()
-    except Exception as e:
-        st.error(f"Error loading {page_name}: {str(e)}")
-        st.exception(e)
-
-def show_placeholder_page(page_name):
-    """Show placeholder for pages that don't exist yet"""
-    st.title(f"{page_name}")
-    st.markdown("---")
-    st.info(f"👷‍♂️ This page is under construction. Your existing {page_name} code should go here.")
-    st.markdown("""
-    ### How to add your page:
+def init_session_state():
+    """Initialize session variables"""
+    defaults = {
+        "logged_in": False,
+        "username": None,
+        "role": "",
+        "login_attempts": {},
+        "model": "",
+        "record_date": None,
+        "last_activity": None
+    }
     
-    1. Create a file in `views/` folder with your page code
-    2. Add a `show()` function that contains your page logic
-    3. The app will automatically load it
-    
-    **Example structure:**
-    ```python
-    import streamlit as st
-    
-    def show():
-        st.title("Your Page Title")
-        # Your code here
-    ```
-    """)
+    for key, value in defaults.items():
+        if key not in st.session_state:
+            st.session_state[key] = value
+
 
 def main():
-    # Initialize session state
+    """Main application entry point"""
     init_session_state()
+    ensure_files()
     
-    # Check if user is logged in
     logged_in = show_login_ui()
     
     if not logged_in:
+        st.title("📊 Cycle Time Recorder")
+        st.markdown("""
+        ### 🔐 Login Required
+        กรุณาล็อกอินจาก sidebar
+        
+        #### ✨ Features
+        - 🔐 Secure login with audit trail
+        - 📊 บันทึก Cycle Time หลาย Station
+        - ✏️ แก้ไขและลบข้อมูล
+        - 🔍 ค้นหากรองข้อมูล
+        - 📈 Analytics & reporting
+        - 👥 User management (Admin)
+        - 📋 Audit trail logging
+        - 💾 Data backup & export
+        - ⚙️ System settings
+        
+        
+        """)
         return
     
-    # Show user info in sidebar
-    show_user_info()
-    
-    # Debug info (TEMPORARY - Remove after fixing admin access)
-    st.sidebar.markdown("---")
-    st.sidebar.write("**🔍 DEBUG INFO:**")
-    st.sidebar.write(f"Username: {st.session_state.get('username', 'NOT SET')}")
-    st.sidebar.write(f"Role: {st.session_state.get('role', 'NOT SET')}")
-    st.sidebar.write(f"Logged in: {st.session_state.get('logged_in', False)}")
     st.sidebar.markdown("---")
     
-    # Sidebar navigation
-    st.sidebar.title("⏱️ Cycle Time Recorder")
-    st.sidebar.markdown("---")
+    menu_items = ["📊 Entry", "📋 View/Edit", "📈 Analytics", "📤 Export"]
+    if st.session_state.role == "Admin":
+        menu_items.extend(["🔒 Admin", "⚙️ Settings"])
     
-    # Navigation menu
-    page = st.sidebar.radio(
-        "Navigation",
-        [
-            "📝 Data Entry",
-            "👁️ View & Edit Records",
-            "📊 Analytics Dashboard",
-            "📤 Export & Reports",
-            "⚙️ Settings",
-            "👨‍💼 Admin Panel"
-        ],
-        key="navigation"
-    )
+    st.sidebar.write("**Navigation:**")
+    choice = st.sidebar.radio("", menu_items)
     
-    st.sidebar.markdown("---")
-    
-    # Load the selected page with error handling
-    try:
-        if page == "📝 Data Entry":
-            try:
-                from views import main_entry
-                load_page(main_entry, "Data Entry")
-            except (ImportError, ModuleNotFoundError) as e:
-                st.error(f"Cannot load Data Entry: {str(e)}")
-                show_placeholder_page("📝 Data Entry")
-            
-        elif page == "👁️ View & Edit Records":
-            try:
-                from views import view_edit
-                load_page(view_edit, "View & Edit Records")
-            except (ImportError, ModuleNotFoundError):
-                show_placeholder_page("👁️ View & Edit Records")
-            
-        elif page == "📊 Analytics Dashboard":
-            try:
-                from views import analytics
-                load_page(analytics, "Analytics Dashboard")
-            except (ImportError, ModuleNotFoundError):
-                show_placeholder_page("📊 Analytics Dashboard")
-            
-        elif page == "📤 Export & Reports":
-            try:
-                from views import export
-                load_page(export, "Export & Reports")
-            except (ImportError, ModuleNotFoundError):
-                show_placeholder_page("📤 Export & Reports")
-            
-        elif page == "⚙️ Settings":
-            try:
-                from views import settings
-                load_page(settings, "Settings")
-            except (ImportError, ModuleNotFoundError):
-                show_placeholder_page("⚙️ Settings")
-            
-        elif page == "👨‍💼 Admin Panel":
-            # Check admin access - Handle both "Admin" and "admin" roles
-            user_role = st.session_state.get('role', '')
-            
-            st.write(f"**Checking admin access...**")
-            st.write(f"Your role: '{st.session_state.get('role', 'NOT SET')}'")
-            
-            # Check for both "Admin" (capitalized) and "admin" (lowercase)
-            if user_role and user_role.lower() == "admin":
-                try:
-                    from views import admin
-                    load_page(admin, "Admin Panel")
-                except (ImportError, ModuleNotFoundError) as e:
-                    st.error(f"Cannot load Admin Panel: {str(e)}")
-                    show_placeholder_page("👨‍💼 Admin Panel")
-            else:
-                st.error("❌ Access denied. Admin privileges required.")
-                st.info(f"**Current role:** '{st.session_state.get('role', 'NOT SET')}'")
-                st.info("**To fix this:**")
-                st.markdown("""
-                1. Go to your `data/users.json` file
-                2. Find your username
-                3. Change `"role": "user"` to `"role": "admin"`
-                4. Save and commit
-                5. Logout and login again
-                
-                **OR**
-                
-                1. Delete `data/users.json` file
-                2. Login with: **admin** / **admin123**
-                """)
-                
-    except Exception as e:
-        st.error(f"❌ Error loading page: {str(e)}")
-        st.info("💡 Make sure all required page files exist in the `views/` folder")
-        st.exception(e)
-    
-    # Footer
-    st.sidebar.markdown("---")
-    st.sidebar.caption("© 2024 Cycle Time Recorder v1.0")
+    if choice == "📊 Entry":
+        main_entry.show()
+    elif choice == "📋 View/Edit":
+        view_edit.show()
+    elif choice == "📈 Analytics":
+        analytics.show()
+    elif choice == "📤 Export":
+        export.show()
+    elif choice == "🔒 Admin":
+        admin.show()
+    elif choice == "⚙️ Settings":
+        settings.show()
+
 
 if __name__ == "__main__":
     main()
