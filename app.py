@@ -129,14 +129,14 @@ def main():
                 show_placeholder_page("⚙️ Settings")
             
         elif page == "👨‍💼 Admin Panel":
-            # Check admin access with better error handling
-            user_role = st.session_state.get('role', '').lower() if st.session_state.get('role') else ''
+            # Check admin access - Handle both "Admin" and "admin" roles
+            user_role = st.session_state.get('role', '')
             
             st.write(f"**Checking admin access...**")
             st.write(f"Your role: '{st.session_state.get('role', 'NOT SET')}'")
-            st.write(f"Normalized role: '{user_role}'")
             
-            if user_role == "admin":
+            # Check for both "Admin" (capitalized) and "admin" (lowercase)
+            if user_role and user_role.lower() == "admin":
                 try:
                     from views import admin
                     load_page(admin, "Admin Panel")
