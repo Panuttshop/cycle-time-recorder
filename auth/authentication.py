@@ -14,25 +14,31 @@ SESSION_TIMEOUT_MINUTES = 30
 # ============================================================================
 
 def hash_password(password: str) -> str:
-    """Hash a password using SHA-256 with a salt"""
+    """Hash a password using SHA-256 with a salt (YOUR FORMAT)"""
     salt = secrets.token_hex(16)
     password_salt = f"{password}{salt}"
     hashed = hashlib.sha256(password_salt.encode()).hexdigest()
-    return f"{salt}:{hashed}"
+    return f"{salt}${hashed}"  # Using $ separator like your format
 
-def verify_password(password: str, hashed_password: str) -> bool:
-    """Verify a password against a hashed password (supports old and new formats)"""
+def verify_password(password: str, password_hash: str) -> bool:
+    """Verify a password against a hashed password (YOUR FORMAT)"""
     try:
-        # New format: salt:hash
-        if ':' in hashed_password:
-            salt, original_hash = hashed_password.split(':', 1)
+        # Your format: salt$hash
+        if '$' in password_hash:
+            salt, original_hash = password_hash.split('$', 1)
+            password_salt = f"{password}{salt}"
+            new_hash = hashlib.sha256(password_salt.encode()).hexdigest()
+            return new_hash == original_hash
+        # Old format fallback: salt:hash
+        elif ':' in password_hash:
+            salt, original_hash = password_hash.split(':', 1)
             password_salt = f"{password}{salt}"
             new_hash = hashlib.sha256(password_salt.encode()).hexdigest()
             return new_hash == original_hash
         else:
-            # Old format: direct hash (no salt) - for backwards compatibility
+            # Direct hash (no salt) - for backwards compatibility
             direct_hash = hashlib.sha256(password.encode()).hexdigest()
-            return direct_hash == hashed_password
+            return direct_hash == password_hash
     except (ValueError, AttributeError, TypeError):
         return False
 
@@ -93,6 +99,8 @@ def init_session_state():
         st.session_state.username = None
     if 'role' not in st.session_state:
         st.session_state.role = None
+    if 'full_name' not in st.session_state:
+        st.session_state.full_name = None
     if 'last_activity' not in st.session_state:
         st.session_state.last_activity = None
     if 'login_time' not in st.session_state:
@@ -118,14 +126,14 @@ def update_activity():
 # ============================================================================
 
 def load_users():
-    """Load users from JSON file"""
+    """Load users from JSON file (YOUR FORMAT)"""
     try:
         if not USERS_FILE.exists():
             # Create default admin user if no users exist
             default_users = {
                 "admin": {
-                    "password": hash_password("admin123"),
-                    "role": "admin",
+                    "password_hash": hash_password("admin123"),
+                    "role": "Admin",  # Capitalized like your format
                     "created_at": datetime.now().isoformat()
                 }
             }
@@ -138,15 +146,6 @@ def load_users():
         if not isinstance(users, dict):
             raise ValueError("Invalid users data structure")
         
-        # Ensure admin user exists with correct structure
-        if "admin" not in users or not isinstance(users.get("admin"), dict):
-            users["admin"] = {
-                "password": hash_password("admin123"),
-                "role": "admin",
-                "created_at": datetime.now().isoformat()
-            }
-            save_json(USERS_FILE, users)
-        
         return users
         
     except Exception as e:
@@ -154,8 +153,8 @@ def load_users():
         # Return default admin user on any error
         default_users = {
             "admin": {
-                "password": hash_password("admin123"),
-                "role": "admin",
+                "password_hash": hash_password("admin123"),
+                "role": "Admin",
                 "created_at": datetime.now().isoformat()
             }
         }
@@ -167,47 +166,43 @@ def save_users(users):
     save_json(USERS_FILE, users)
 
 def authenticate(username, password):
-    """Authenticate user credentials"""
+    """Authenticate user credentials (YOUR FORMAT)"""
     try:
         users = load_users()
         
         if username not in users:
-            return False, None
+            return False, None, None
         
         user_data = users[username]
         
-        # Check if password field exists
-        if 'password' not in user_data:
-            # User data is corrupted, recreate default admin if this is admin
-            if username == "admin":
-                users[username]['password'] = hash_password("admin123")
-                save_users(users)
-                user_data = users[username]
-            else:
-                return False, None
+        # Check if password_hash field exists (YOUR FORMAT)
+        password_field = user_data.get('password_hash') or user_data.get('password')
         
-        if verify_password(password, user_data['password']):
-            # Automatically upgrade old password format to new format
-            if ':' not in user_data['password']:
-                users[username]['password'] = hash_password(password)
-                save_users(users)
-            
-            return True, user_data.get('role', 'user')
+        if not password_field:
+            # User data is corrupted
+            return False, None, None
         
-        return False, None
+        if verify_password(password, password_field):
+            # Return role and full_name (YOUR FORMAT)
+            role = user_data.get('role', 'Member')
+            full_name = user_data.get('full_name', username)
+            return True, role, full_name
+        
+        return False, None, None
     except Exception as e:
         print(f"Authentication error: {e}")
-        return False, None
+        return False, None, None
 
 # ============================================================================
 # Login/Logout Functions
 # ============================================================================
 
-def login(username, role):
-    """Set user as logged in"""
+def login(username, role, full_name=None):
+    """Set user as logged in (YOUR FORMAT)"""
     st.session_state.logged_in = True
     st.session_state.username = username
     st.session_state.role = role
+    st.session_state.full_name = full_name or username
     st.session_state.login_time = datetime.now().isoformat()
     st.session_state.last_activity = datetime.now().isoformat()
     log_audit_event("login", username, "User logged in successfully")
@@ -222,6 +217,7 @@ def logout():
     st.session_state.logged_in = False
     st.session_state.username = None
     st.session_state.role = None
+    st.session_state.full_name = None
     st.session_state.last_activity = None
     st.session_state.login_time = None
 
@@ -290,11 +286,11 @@ def show_login_ui():
             if not username or not password:
                 st.error("❌ Please enter both username and password")
             else:
-                success, role = authenticate(username, password)
+                success, role, full_name = authenticate(username, password)
                 
                 if success:
-                    login(username, role)
-                    st.success(f"✅ Welcome back, {username}!")
+                    login(username, role, full_name)
+                    st.success(f"✅ Welcome back, {full_name}!")
                     st.balloons()
                     st.rerun()
                 else:
@@ -308,8 +304,8 @@ def show_user_info():
     if st.session_state.logged_in:
         with st.sidebar:
             st.markdown("---")
-            st.markdown(f"**👤 User:** {st.session_state.username}")
-            st.markdown(f"**🎭 Role:** {st.session_state.role.upper()}")
+            st.markdown(f"**👤 User:** {st.session_state.full_name or st.session_state.username}")
+            st.markdown(f"**🎭 Role:** {st.session_state.role}")
             
             # Show session info
             if st.session_state.login_time:
@@ -340,11 +336,12 @@ def change_password(username, old_password, new_password):
         return False, "User not found"
     
     # Verify old password
-    if not verify_password(old_password, users[username]['password']):
+    password_field = users[username].get('password_hash') or users[username].get('password')
+    if not verify_password(old_password, password_field):
         return False, "Incorrect current password"
     
     # Update password
-    users[username]['password'] = hash_password(new_password)
+    users[username]['password_hash'] = hash_password(new_password)
     users[username]['password_changed_at'] = datetime.now().isoformat()
     
     save_users(users)
@@ -352,19 +349,22 @@ def change_password(username, old_password, new_password):
     
     return True, "Password changed successfully"
 
-def create_user(username, password, role="user", created_by="admin"):
-    """Create a new user (admin only)"""
+def create_user(username, password, role="Member", full_name=None, created_by="admin"):
+    """Create a new user (YOUR FORMAT)"""
     users = load_users()
     
     if username in users:
         return False, "Username already exists"
     
     users[username] = {
-        "password": hash_password(password),
-        "role": role,
+        "password_hash": hash_password(password),
+        "role": role,  # "Admin" or "Member"
         "created_at": datetime.now().isoformat(),
         "created_by": created_by
     }
+    
+    if full_name:
+        users[username]["full_name"] = full_name
     
     save_users(users)
     log_audit_event("user_created", created_by, f"Created new user: {username} with role: {role}")
@@ -392,7 +392,8 @@ def get_all_users():
     users = load_users()
     return {
         username: {
-            "role": data["role"],
+            "role": data.get("role", "Member"),
+            "full_name": data.get("full_name", username),
             "created_at": data.get("created_at", "Unknown")
         }
         for username, data in users.items()
@@ -413,7 +414,8 @@ def require_auth(role_required=None):
             
             update_activity()
             
-            if role_required and st.session_state.role != role_required:
+            # Check role if specified (case-insensitive)
+            if role_required and st.session_state.role.lower() != role_required.lower():
                 st.error(f"❌ Access denied. This page requires {role_required} role.")
                 return False
             
