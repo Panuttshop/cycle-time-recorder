@@ -35,7 +35,7 @@ def show_placeholder_page(page_name):
     st.markdown("""
     ### How to add your page:
     
-    1. Create a file in `views/` folder with your page code
+    1. Create a file in `pages/` folder with your page code
     2. Add a `show()` function that contains your page logic
     3. The app will automatically load it
     
@@ -62,6 +62,14 @@ def main():
     # Show user info in sidebar
     show_user_info()
     
+    # Debug info (TEMPORARY - Remove after fixing admin access)
+    st.sidebar.markdown("---")
+    st.sidebar.write("**🔍 DEBUG INFO:**")
+    st.sidebar.write(f"Username: {st.session_state.get('username', 'NOT SET')}")
+    st.sidebar.write(f"Role: {st.session_state.get('role', 'NOT SET')}")
+    st.sidebar.write(f"Logged in: {st.session_state.get('logged_in', False)}")
+    st.sidebar.markdown("---")
+    
     # Sidebar navigation
     st.sidebar.title("⏱️ Cycle Time Recorder")
     st.sidebar.markdown("---")
@@ -86,52 +94,76 @@ def main():
     try:
         if page == "📝 Data Entry":
             try:
-                from views import main_entry
+                from pages import main_entry
                 load_page(main_entry, "Data Entry")
-            except (ImportError, ModuleNotFoundError):
+            except (ImportError, ModuleNotFoundError) as e:
+                st.error(f"Cannot load Data Entry: {str(e)}")
                 show_placeholder_page("📝 Data Entry")
             
         elif page == "👁️ View & Edit Records":
             try:
-                from views import view_edit
+                from pages import view_edit
                 load_page(view_edit, "View & Edit Records")
             except (ImportError, ModuleNotFoundError):
                 show_placeholder_page("👁️ View & Edit Records")
             
         elif page == "📊 Analytics Dashboard":
             try:
-                from views import analytics
+                from pages import analytics
                 load_page(analytics, "Analytics Dashboard")
             except (ImportError, ModuleNotFoundError):
                 show_placeholder_page("📊 Analytics Dashboard")
             
         elif page == "📤 Export & Reports":
             try:
-                from views import export
+                from pages import export
                 load_page(export, "Export & Reports")
             except (ImportError, ModuleNotFoundError):
                 show_placeholder_page("📤 Export & Reports")
             
         elif page == "⚙️ Settings":
             try:
-                from views import settings
+                from pages import settings
                 load_page(settings, "Settings")
             except (ImportError, ModuleNotFoundError):
                 show_placeholder_page("⚙️ Settings")
             
         elif page == "👨‍💼 Admin Panel":
-            if st.session_state.role == "admin":
+            # Check admin access with better error handling
+            user_role = st.session_state.get('role', '').lower() if st.session_state.get('role') else ''
+            
+            st.write(f"**Checking admin access...**")
+            st.write(f"Your role: '{st.session_state.get('role', 'NOT SET')}'")
+            st.write(f"Normalized role: '{user_role}'")
+            
+            if user_role == "admin":
                 try:
-                    from views import admin
+                    from pages import admin
                     load_page(admin, "Admin Panel")
-                except (ImportError, ModuleNotFoundError):
+                except (ImportError, ModuleNotFoundError) as e:
+                    st.error(f"Cannot load Admin Panel: {str(e)}")
                     show_placeholder_page("👨‍💼 Admin Panel")
             else:
                 st.error("❌ Access denied. Admin privileges required.")
+                st.info(f"**Current role:** '{st.session_state.get('role', 'NOT SET')}'")
+                st.info("**To fix this:**")
+                st.markdown("""
+                1. Go to your `data/users.json` file
+                2. Find your username
+                3. Change `"role": "user"` to `"role": "admin"`
+                4. Save and commit
+                5. Logout and login again
+                
+                **OR**
+                
+                1. Delete `data/users.json` file
+                2. Login with: **admin** / **admin123**
+                """)
                 
     except Exception as e:
         st.error(f"❌ Error loading page: {str(e)}")
-        st.info("💡 Make sure all required page files exist in the `views/` folder")
+        st.info("💡 Make sure all required page files exist in the `pages/` folder")
+        st.exception(e)
     
     # Footer
     st.sidebar.markdown("---")
